@@ -1,0 +1,308 @@
+#include "raylib.h"
+#include <string.h>
+#include <stdlib.h>
+
+// Global Variables
+int hasFlashlight = 0, hasKey = 0, hasMap = 0;
+int currentScreen = 0; // Screen navigation
+int miniGameSolved = 0; // Track mini-game success
+char miniGameInput[20] = "";
+char riddleInput[10] = "";
+int riddleChoice = 0;
+
+// Function Declarations
+void DrawMainMenu();
+void DrawInstructions();
+void DrawGame();
+void DrawInventory();
+void DrawBookshelf();
+void DrawDesk();
+void DrawGate();
+void DrawAttic();
+void DrawBasement();
+void DrawReadingRoom();
+void DrawMiniGame();
+void DrawRiddle();
+
+int main() {
+    // Initialization
+    const int screenWidth = 800;
+    const int screenHeight = 600;
+
+    InitWindow(screenWidth, screenHeight, "Haunted Library Escape");
+    SetTargetFPS(60);
+
+    // Main Game Loop
+    while (!WindowShouldClose()) {
+        BeginDrawing();
+        ClearBackground(BLACK);
+
+        // Screen navigation
+        switch (currentScreen) {
+            case 0: DrawMainMenu(); break;
+            case 1: DrawInstructions(); break;
+            case 2: DrawGame(); break;
+            case 3: DrawInventory(); break;
+            case 4: DrawBookshelf(); break;
+            case 5: DrawDesk(); break;
+            case 6: DrawGate(); break;
+            case 7: DrawAttic(); break;
+            case 8: DrawBasement(); break;
+            case 9: DrawReadingRoom(); break;
+            case 10: DrawMiniGame(); break;
+            case 11: DrawRiddle(); break;
+        }
+
+        EndDrawing();
+    }
+
+    CloseWindow();
+    return 0;
+}
+
+// Screen: Main Menu
+void DrawMainMenu() {
+    DrawText("Haunted Library Escape", 200, 100, 30, LIGHTGRAY);
+    DrawText("1. Start Game", 300, 200, 20, WHITE);
+    DrawText("2. Instructions", 300, 250, 20, WHITE);
+    DrawText("3. Exit", 300, 300, 20, WHITE);
+
+    if (IsKeyPressed(KEY_ONE)) currentScreen = 2; // Start Game
+    if (IsKeyPressed(KEY_TWO)) currentScreen = 1; // Instructions
+    if (IsKeyPressed(KEY_THREE)) CloseWindow();   // Exit
+}
+
+// Screen: Instructions
+void DrawInstructions() {
+    DrawText("Game Instructions", 300, 100, 30, LIGHTGRAY);
+    DrawText("1. Explore the library to escape.", 50, 200, 20, WHITE);
+    DrawText("2. Solve puzzles and collect items.", 50, 250, 20, WHITE);
+    DrawText("3. Beware of traps and dead ends.", 50, 300, 20, WHITE);
+    DrawText("Press [N] to go back.", 300, 500, 20, GRAY);
+
+    if (IsKeyPressed(KEY_N)) currentScreen = 0;
+}
+
+// Screen: Game (Explore Library)
+void DrawGame() {
+    DrawText("Where will you start exploring?", 150, 100, 25, LIGHTGRAY);
+    DrawText("0. Check Inventory", 200, 200, 20, WHITE);
+    DrawText("1. Bookshelf", 200, 250, 20, WHITE);
+    DrawText("2. Desk", 200, 300, 20, WHITE);
+    DrawText("3. Attic (Requires Flashlight)", 200, 350, 20, WHITE);
+    DrawText("4. Basement (Requires Key)", 200, 400, 20, WHITE);
+    DrawText("5. Reading Room", 200, 450, 20, WHITE);
+    DrawText("6. Gate", 200, 500, 20, WHITE);
+
+    if (IsKeyPressed(KEY_ZERO)) currentScreen = 3; // Inventory
+    if (IsKeyPressed(KEY_ONE)) currentScreen = 4; // Bookshelf
+    if (IsKeyPressed(KEY_TWO)) currentScreen = 5; // Desk
+    if (IsKeyPressed(KEY_THREE) && hasFlashlight) currentScreen = 7; // Attic (Requires Flashlight)
+    if (IsKeyPressed(KEY_FOUR) && hasKey) currentScreen = 8; // Basement (Requires Key)
+    if (IsKeyPressed(KEY_FIVE)) currentScreen = 9; // Reading Room
+    if (IsKeyPressed(KEY_SIX)) currentScreen = 6; // Gate
+}
+
+// Screen: Inventory
+void DrawInventory() {
+    DrawText("Inventory:", 350, 100, 25, LIGHTGRAY);
+    if (hasFlashlight) DrawText("- Flashlight", 350, 200, 20, GREEN);
+    if (hasKey) DrawText("- Key", 350, 250, 20, GREEN);
+    if (hasMap) DrawText("- Map", 350, 300, 20, GREEN);
+    if (!hasFlashlight && !hasKey && !hasMap) DrawText("- (Empty)", 350, 200, 20, RED);
+
+    DrawText("Press [N] to go back.", 300, 500, 20, GRAY);
+    if (IsKeyPressed(KEY_N)) currentScreen = 2;
+}
+
+// Screen: Bookshelf
+void DrawBookshelf() {
+    DrawText("You find a flashlight in the bookshelf!", 150, 200, 20, LIGHTGRAY);
+    hasFlashlight = 1;
+
+    DrawText("Press [N] to go back.", 300, 500, 20, GRAY);
+    if (IsKeyPressed(KEY_N)) currentScreen = 2;
+}
+
+// Screen: Desk
+char deskInput[10] = ""; // Buffer for desk answer input
+
+void DrawDesk() {
+    DrawText("You search the desk and find a secret drawer.", 100, 200, 20, LIGHTGRAY);
+    DrawText("A creepy witch appears and gives you a riddle:", 100, 250, 20, LIGHTGRAY);
+    DrawText("'What is half of 6 plus 6?'", 100, 300, 20, RED);
+    DrawText("Enter your answer:", 100, 350, 20, GRAY);
+
+    int key = GetKeyPressed();
+    if (key >= KEY_ZERO && key <= KEY_NINE) {
+        int len = strlen(deskInput);
+        if (len < 9) deskInput[len] = key; // Append digit
+    }
+    if (IsKeyPressed(KEY_BACKSPACE)) {
+        int len = strlen(deskInput);
+        if (len > 0) deskInput[len - 1] = '\0'; // Remove last character
+    }
+
+    DrawText(deskInput, 300, 350, 20, WHITE);
+
+    if (IsKeyPressed(KEY_ENTER)) {
+        if (strcmp(deskInput, "9") == 0) {
+            hasKey = 1;
+            DrawText("Correct! You got the KEY.", 100, 400, 20, GREEN);
+            DrawText("Press [N] to go back.", 300, 500, 20, GRAY);
+            if (IsKeyPressed(KEY_N)) currentScreen = 2; // Return to game
+        } else {
+            DrawText("Wrong! Try again.", 100, 400, 20, RED);
+        }
+    }
+}
+
+// Screen: Gate
+void DrawGate() {
+    if (hasKey) {
+        DrawText("You unlock the gate and escape the library!", 150, 200, 25, GREEN);
+        DrawText("Congratulations! You win!", 200, 300, 30, LIGHTGRAY);
+        DrawText("Press [ESC] to exit.", 300, 500, 20, GRAY);
+        if (IsKeyPressed(KEY_ESCAPE)) CloseWindow();
+    } else {
+        DrawText("The gate is locked. Find the key first.", 150, 200, 20, RED);
+        DrawText("Press [N] to go back.", 300, 500, 20, GRAY);
+        if (IsKeyPressed(KEY_N)) currentScreen = 2;
+    }
+}
+
+// Screen: Attic
+void DrawAttic() {
+    if (hasFlashlight) {
+        DrawText("You use the flashlight to explore the attic.", 100, 200, 20, LIGHTGRAY);
+        DrawText("You found a map!", 100, 250, 20, GREEN);
+        hasMap = 1;
+    } else {
+        DrawText("It's too dark to explore the attic.", 100, 200, 20, RED);
+        DrawText("Find a flashlight first.", 100, 250, 20, GRAY);
+    }
+
+    DrawText("Press [N] to go back.", 300, 500, 20, GRAY);
+    if (IsKeyPressed(KEY_N)) currentScreen = 2; // Return to game
+}
+
+// Screen: Basement
+void DrawBasement() {
+    if (hasKey) {
+        DrawText("You unlock the basement door and descend into the dark.", 100, 200, 20, LIGHTGRAY);
+        DrawText("Play the mini-game to progress!", 100, 250, 20, WHITE);
+        DrawText("Press [ENTER] to start mini-game.", 100, 300, 20, GRAY);
+
+        if (IsKeyPressed(KEY_ENTER)) currentScreen = 10; // Mini-Game screen
+    } else {
+        DrawText("The basement door is locked. Find the key first.", 100, 200, 20, RED);
+    }
+
+    DrawText("Press [N] to go back.", 300, 500, 20, GRAY);
+    if (IsKeyPressed(KEY_N)) currentScreen = 2;
+}
+
+char riddleInput[10]; // Buffer for riddle answer input
+float riddleTimer = 0;     // Timer for displaying the riddle
+bool riddleSolved = false; // Track if the riddle was solved
+
+void DrawReadingRoom() {
+    // Display the riddle and timer
+    DrawText("The door slams shut behind you!", 100, 200, 20, RED);
+    DrawText("You find a riddle written on the wall:", 100, 250, 20, LIGHTGRAY);
+    DrawText("IN FRONT OF YOU ARE 3 DOORS!!!", 100, 300, 20, WHITE);
+    DrawText("1. A serial killer.", 100, 350, 20, WHITE);
+    DrawText("2. A lion starved for a year.", 100, 400, 20, WHITE);
+    DrawText("3. A poisonous lake.", 100, 450, 20, WHITE);
+    DrawText("Which door do you choose? [1, 2, 3]:", 100, 500, 20, GRAY);
+
+    // Track time elapsed
+    riddleTimer += GetFrameTime();
+
+    // Allow the user to input their choice
+    int key = GetKeyPressed();
+    if (key >= KEY_ONE && key <= KEY_THREE) {
+        int len = strlen(riddleInput);
+        if (len < 9) riddleInput[len] = key; // Append digit
+    }
+    if (IsKeyPressed(KEY_BACKSPACE)) {
+        int len = strlen(riddleInput);
+        if (len > 0) riddleInput[len - 1] = '\0'; // Remove last character
+    }
+    DrawText(riddleInput, 300, 550, 20, WHITE);
+
+    // Check if the user has answered and validate
+    if (IsKeyPressed(KEY_N)) {
+        if (strcmp(riddleInput, "2") == 0) {
+            DrawText("You chose wisely! The lion is dead.", 100, 600, 20, GREEN);
+            riddleSolved = true;
+        } else {
+            DrawText("GAME OVER! You made the wrong choice.", 100, 600, 20, RED);
+            currentScreen = 0; // Return to main menu after wrong choice
+        }
+    }
+
+    // If riddle is solved, allow the player to proceed
+    if (riddleSolved) {
+        DrawText("Press [N] to return to the library.", 300, 650, 20, GRAY);
+        if (IsKeyPressed(KEY_N)) currentScreen = 2; // Return to game
+    }
+
+    // If time runs out (optional)
+    if (riddleTimer > 30.0f && !riddleSolved) { // 30 seconds for the riddle
+        DrawText("Time's up! The library claims your soul.", 100, 600, 20, RED);
+        currentScreen = 0; // Return to main menu
+    }
+}
+
+// Screen: Mini-Game
+void DrawMiniGame() {
+    DrawText("Mini-Game: Unscramble the word 'SOTIUYSRME'.", 100, 200, 20, LIGHTGRAY);
+    DrawText("Enter your answer:", 100, 250, 20, GRAY);
+
+    int key = GetKeyPressed();
+    if (key >= KEY_A && key <= KEY_Z) {
+        int len = strlen(miniGameInput);
+        if (len < 19) miniGameInput[len] = key; // Add character
+    }
+    if (IsKeyPressed(KEY_BACKSPACE)) {
+        int len = strlen(miniGameInput);
+        if (len > 0) miniGameInput[len - 1] = '\0'; // Remove character
+    }
+    DrawText(miniGameInput, 300, 250, 20, WHITE);
+
+    if (IsKeyPressed(KEY_ENTER)) {
+        if (strcmp(miniGameInput, "MYSTERIOUS") == 0) {
+            miniGameSolved = 1;
+            DrawText("Correct! You found a clue to escape.", 100, 300, 20, GREEN);
+        } else {
+            DrawText("Wrong! Try again.", 100, 300, 20, RED);
+        }
+    }
+
+    DrawText("Press [N] to go back.", 300, 500, 20, GRAY);
+    if (IsKeyPressed(KEY_N)) currentScreen = 2; // Return to game
+}
+
+// Screen: Logic Riddle
+void DrawRiddle() {
+    DrawText("Riddle: In front of you are three doors!", 100, 200, 20, LIGHTGRAY);
+    DrawText("1. A serial killer.", 100, 250, 20, WHITE);
+    DrawText("2. A lion starved for a year.", 100, 300, 20, WHITE);
+    DrawText("3. A poisonous lake.", 100, 350, 20, WHITE);
+    DrawText("Which door do you choose? [1, 2, 3]:", 100, 400, 20, GRAY);
+
+    if (IsKeyPressed(KEY_ONE)) {
+        DrawText("GAME OVER! Killed by the serial killer.", 100, 450, 20, RED);
+        currentScreen = 0; // Return to main menu
+    }
+    if (IsKeyPressed(KEY_TWO)) {
+        DrawText("You chose wisely! The lion is dead.", 100, 450, 20, GREEN);
+        DrawText("Press [N] to go back.", 300, 500, 20, GRAY);
+        if (IsKeyPressed(KEY_N)) currentScreen = 2; // Return to game
+    }
+    if (IsKeyPressed(KEY_THREE)) {
+        DrawText("GAME OVER! Drowned in the poisonous lake.", 100, 450, 20, RED);
+        currentScreen = 0; // Return to main menu
+    }
+}
